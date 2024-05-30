@@ -27,7 +27,6 @@ httpie==2.4.0 # HTTPie - a CLI, cURL-like tool for humans.
 cloudpickle==1.6.0  # Extended pickling support for Python objects
 msgpack==1.0.2 # MessagePack (de)serializer.
 msgpack-numpy==0.4.7.1 # Numpy data serialization using msgpack
-cysignals==1.10.3 # Interrupt and signal handling for Cython
 h5py==3.3.0 # Read and write HDF5 files from Python
 seaborn==0.11.1 # Python visualization library based on matplotlib  - Basic
 SQLAlchemy==1.4.19 # Database Abstraction Library

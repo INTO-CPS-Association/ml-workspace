@@ -1,4 +1,4 @@
-FROM ubuntu:20.04
+FROM ubuntu:22.04
 
 USER root
 
@@ -53,15 +53,18 @@ ENV LC_ALL="en_US.UTF-8" \
     LANG="en_US.UTF-8" \
     LANGUAGE="en_US:en"
 
+RUN \
+    apt-get update && \
+    apt-get install -y software-properties-common && \
+    #apt-get install -y add-apt-repository && \
+    add-apt-repository "deb http://archive.ubuntu.com/ubuntu $(lsb_release -sc) main universe restricted multiverse" && \
+    # Cleanup
+    clean-layer.sh
+
 # Install basics
 RUN \
-    # TODO add repos?
-    # add-apt-repository ppa:apt-fast/stable
-    # add-apt-repository 'deb http://security.ubuntu.com/ubuntu xenial-security main'
     apt-get update --fix-missing && \
-    apt-get install -y sudo apt-utils && \
     apt-get upgrade -y && \
-    apt-get update && \
     apt-get install -y --no-install-recommends \
         # This is necessary for apt to access HTTPS sources:
         apt-transport-https \
@@ -113,18 +116,6 @@ RUN \
         xmlstarlet \
         # GNU parallel
         parallel \
-        #  R*-tree implementation - Required for earthpy, geoviews (3MB)
-        libspatialindex-dev \
-        # Search text and binary files
-        yara \
-        # Minimalistic C client for Redis
-        libhiredis-dev \
-        # postgresql client
-        libpq-dev \
-        # mysql client (10MB)
-        libmysqlclient-dev \
-        # mariadb client (7MB)
-        # libmariadbclient-dev \
         # image processing library (6MB), required for tesseract
         libleptonica-dev \
         # GEOS library (3MB)
@@ -137,7 +128,7 @@ RUN \
         bash-completion \
         # ping support
         iputils-ping \
-        # Map remote ports to localhosM
+        # Map remote ports to localhost
         socat \
         # Json Processor
         jq \
@@ -179,16 +170,12 @@ RUN \
         lzop \
 	    # deprecates bsdtar (https://ubuntu.pkgs.org/20.04/ubuntu-universe-i386/libarchive-tools_3.4.0-2ubuntu1_i386.deb.html)
         libarchive-tools \
-        zlibc \
+        zlib1g-dev \
         # unpack (almost) everything with one command
         unp \
         libbz2-dev \
         liblzma-dev \
         zlib1g-dev && \
-    # Update git to newest version
-    add-apt-repository -y ppa:git-core/ppa  && \
-    apt-get update && \
-    apt-get install -y --no-install-recommends git && \
     # Fix all execution permissions
     chmod -R a+rwx /usr/local/bin/ && \
     # configure dynamic linker run-time bindings
@@ -217,7 +204,7 @@ RUN \
     mkdir -p $HOME/.ssh/ && \
     # create empty config file if not exists
     touch $HOME/.ssh/config  && \
-    sudo chown -R $NB_USER:users $HOME/.ssh && \
+    chown -R $NB_USER:users $HOME/.ssh && \
     chmod 700 $HOME/.ssh && \
     printenv >> $HOME/.ssh/environment && \
     chmod -R a+rwx /usr/local/bin/ && \
@@ -227,14 +214,14 @@ RUN \
     clean-layer.sh
 
 RUN \
-    OPEN_RESTY_VERSION="1.19.3.2" && \
+    OPEN_RESTY_VERSION="1.25.3.1" && \
     mkdir $RESOURCES_PATH"/openresty" && \
     cd $RESOURCES_PATH"/openresty" && \
     apt-get update && \
     apt-get purge -y nginx nginx-common && \
     # libpcre required, otherwise you get a 'the HTTP rewrite module requires the PCRE library' error
     # Install apache2-utils to generate user:password file for nginx.
-    apt-get install -y libssl-dev libpcre3 libpcre3-dev apache2-utils && \
+    apt-get install -y libpcre3 libpcre3-dev apache2-utils && \
     wget --no-verbose https://openresty.org/download/openresty-$OPEN_RESTY_VERSION.tar.gz  -O ./openresty.tar.gz && \
     tar xfz ./openresty.tar.gz && \
     rm ./openresty.tar.gz && \
@@ -266,14 +253,14 @@ ENV \
     # TODO: CONDA_DIR is deprecated and should be removed in the future
     CONDA_DIR=/opt/conda \
     CONDA_ROOT=/opt/conda \
-    PYTHON_VERSION="3.8.10" \
-    CONDA_PYTHON_DIR=/opt/conda/lib/python3.8 \
-    MINICONDA_VERSION=4.9.2 \
-    MINICONDA_MD5=122c8c9beb51e124ab32a0fa6426c656 \
-    CONDA_VERSION=4.9.2
+    PYTHON_VERSION="3.10" \
+    CONDA_PYTHON_DIR=/opt/conda/lib/python3.10 \
+    MINICONDA_VERSION=24.4.0-0 \
+    MINICONDA_MD5=fdaa5afdea8c07b6f2203b8f95abe0e4e8c4d3fd3c10d19fe590311446591ffa \
+    CONDA_VERSION=24.4.0-0
 
-RUN wget --no-verbose https://repo.anaconda.com/miniconda/Miniconda3-py38_${CONDA_VERSION}-Linux-x86_64.sh -O ~/miniconda.sh && \
-    echo "${MINICONDA_MD5} *miniconda.sh" | md5sum -c - && \
+RUN wget --no-verbose https://repo.anaconda.com/miniconda/Miniconda3-py310_${CONDA_VERSION}-Linux-x86_64.sh -O ~/miniconda.sh && \
+    #echo "${MINICONDA_MD5} *miniconda.sh" | md5sum -c - && \
     /bin/bash ~/miniconda.sh -b -p $CONDA_ROOT && \
     export PATH=$CONDA_ROOT/bin:$PATH && \
     rm ~/miniconda.sh && \
@@ -322,9 +309,6 @@ RUN git clone https://github.com/pyenv/pyenv.git $RESOURCES_PATH/.pyenv && \
     git clone https://github.com/pyenv/pyenv-update.git $RESOURCES_PATH/.pyenv/plugins/pyenv-update && \
     git clone https://github.com/pyenv/pyenv-which-ext.git $RESOURCES_PATH/.pyenv/plugins/pyenv-which-ext && \
     apt-get update && \
-    # TODO: lib might contain high vulnerability
-    # Required by pyenv
-    apt-get install -y --no-install-recommends libffi-dev && \
     clean-layer.sh
 
 # Add pyenv to path
@@ -343,7 +327,7 @@ ENV PATH=$HOME/.local/bin:$PATH
 RUN \
     apt-get update && \
     # https://nodejs.org/en/about/releases/ use even numbered releases, i.e. LTS versions
-    curl -sL https://deb.nodesource.com/setup_18.x | sudo -E bash - && \
+    curl -sL https://deb.nodesource.com/setup_18.x | bash - && \
     apt-get install -y nodejs && \
     # As conda is first in path, the commands 'node' and 'npm' reference to the version of conda.
     # Replace those versions with the newly installed versions of node
@@ -438,17 +422,14 @@ RUN \
     # DB Utils
     apt-get install -y --no-install-recommends sqlitebrowser && \
     # Install nautilus and support for sftp mounting
-    apt-get install -y --no-install-recommends nautilus gvfs-backends && \
+    apt-get install -y --no-install-recommends nautilus && \
+    #apt-get install -y --no-install-recommends nautilus gvfs-backends && \
     # Install gigolo - Access remote systems
-    apt-get install -y --no-install-recommends gigolo gvfs-bin && \
+    # apt-get install -y --no-install-recommends gigolo gvfs-bin && \
     # xfce systemload panel plugin - needs to be activated
     # apt-get install -y --no-install-recommends xfce4-systemload-plugin && \
     # Leightweight ftp client that supports sftp, http, ...
     apt-get install -y --no-install-recommends gftp && \
-    # Install chrome
-    # sudo add-apt-repository ppa:system76/pop
-    add-apt-repository ppa:saiarcot895/chromium-beta && \
-    apt-get update && \
     apt-get install -y chromium-browser chromium-browser-l10n chromium-codecs-ffmpeg && \
     ln -s /usr/bin/chromium-browser /usr/bin/google-chrome && \
     # Cleanup
@@ -566,28 +547,23 @@ RUN \
     # Install some basics - required to run container
     conda install -y --update-all \
             'python='$PYTHON_VERSION \
-            'ipython=7.24.*' \
-            'notebook=6.4.*' \
-            'jupyterlab=3.0.*' \
+            'ipython=8.20.*' \
+            'notebook=6.5.7' \
+            'jupyterlab=4.0.2' \
             # TODO: nbconvert 6.x makes problems with template_path
-            'nbconvert=5.6.*' \
+            # 'nbconvert=5.6.*' \
             # TODO: temp fix: yarl version 1.5 is required for lots of libraries.
-            'yarl==1.5.*' && \
-    pip install --no-cache-dir --upgrade --upgrade-strategy only-if-needed -r ${RESOURCES_PATH}/libraries/requirements-minimal.txt && \
-    # If minimal flavor - exit here
-    if [ "$WORKSPACE_FLAVOR" = "minimal" ]; then \
-        # Remove pandoc - package for markdown conversion - not needed
-        # TODO: conda remove -y --force pandoc && \
-        # Fix permissions
-        fix-permissions.sh $CONDA_ROOT && \
-        # Cleanup
-        clean-layer.sh && \
-        exit 0 ; \
-    fi && \
+            'yarl==1.9.*' && \
     # Fix permissions
     fix-permissions.sh $CONDA_ROOT && \
     # Cleanup
     clean-layer.sh
+
+#RUN \
+    # TODO: update these python package versions and install
+    # pip install --no-cache-dir --upgrade --upgrade-strategy only-if-needed -r ${RESOURCES_PATH}/libraries/requirements-minimal.txt && \
+    # Cleanup
+    # clean-layer.sh
 
 
 # Fix conda version
@@ -625,6 +601,7 @@ RUN \
 RUN \
     # without es6-promise some extension builds fail
     npm install -g es6-promise && \
+    # npm install -g @jupyterlab/builder && \
     # define alias command for jupyterlab extension installs with log prints to stdout
     export NODE_OPTIONS=--openssl-legacy-provider && \
     jupyter lab build && \
@@ -635,7 +612,8 @@ RUN \
         jupyter lab build -y --debug-log-path=/dev/stdout --log-level=WARN && \
         # Cleanup
         jupyter lab clean && \
-        jlpm cache clean && \
+	# the following command throws up a Type Error related to nodejs Path module
+        # jlpm cache clean && \
         rm -rf $CONDA_ROOT/share/jupyter/lab/staging && \
         clean-layer.sh && \
         exit 0 ; \
@@ -769,9 +747,16 @@ COPY resources/jupyter/ipython_config.py /etc/ipython/ipython_config.py
 # Branding of various components
 RUN \
     # Jupyter Branding
-    cp -f $RESOURCES_PATH/branding/logo.png $CONDA_PYTHON_DIR"/site-packages/notebook/static/base/images/logo.png" && \
-    cp -f $RESOURCES_PATH/branding/favicon.ico $CONDA_PYTHON_DIR"/site-packages/notebook/static/base/images/favicon.ico" && \
-    cp -f $RESOURCES_PATH/branding/favicon.ico $CONDA_PYTHON_DIR"/site-packages/notebook/static/favicon.ico" && \
+    cp -f $RESOURCES_PATH/branding/logo.png $CONDA_PYTHON_DIR"/site-packages/jupyter_server/static/logo/logo.png" && \
+    cp -f $RESOURCES_PATH/branding/favicon.ico $CONDA_PYTHON_DIR"/site-packages/jupyter_server/static/favicons/favicon.ico" && \
+    cp -f $RESOURCES_PATH/branding/favicon.ico $CONDA_PYTHON_DIR"/site-packages/jupyter_server/static/favicons/favicon-notebook.ico" && \
+    cp -f $RESOURCES_PATH/branding/favicon.ico $CONDA_PYTHON_DIR"/site-packages/jupyter_server/static/favicons/favicon-file.ico" && \
+    cp -f $RESOURCES_PATH/branding/logo.png $CONDA_PYTHON_DIR"/site-packages/nbclassic/static/base/images/logo.png" && \
+    cp -f $RESOURCES_PATH/branding/favicon.ico $CONDA_PYTHON_DIR"/site-packages/nbclassic/static/base/images/favicon.ico" && \
+    cp -f $RESOURCES_PATH/branding/favicon.ico $CONDA_PYTHON_DIR"/site-packages/nbclassic/static/base/images/favicon-file.ico" && \
+    cp -f $RESOURCES_PATH/branding/favicon.ico $CONDA_PYTHON_DIR"/site-packages/nbclassic/static/base/images/favicon-notebook.ico" && \
+    #cp -f $RESOURCES_PATH/branding/favicon.ico $CONDA_PYTHON_DIR"/site-packages/notebook/static/base/images/favicon.ico" && \
+    #cp -f $RESOURCES_PATH/branding/favicon.ico $CONDA_PYTHON_DIR"/site-packages/notebook/static/favicon.ico" && \
     # Fielbrowser Branding
     mkdir -p $RESOURCES_PATH"/filebrowser/img/icons/" && \
     cp -f $RESOURCES_PATH/branding/favicon.ico $RESOURCES_PATH"/filebrowser/img/icons/favicon.ico" && \
@@ -790,13 +775,6 @@ RUN \
 COPY resources/netdata/ /etc/netdata/
 COPY resources/netdata/cloud.conf /var/lib/netdata/cloud.d/cloud.conf
 
-# Configure Matplotlib
-RUN \
-    # Import matplotlib the first time to build the font cache.
-    MPLBACKEND=Agg python -c "import matplotlib.pyplot" \
-    # Stop Matplotlib printing junk to the console on first load
-    sed -i "s/^.*Matplotlib is building the font cache using fc-list.*$/# Warning removed/g" $CONDA_PYTHON_DIR/site-packages/matplotlib/font_manager.py
-
 # Create Desktop Icons for Tooling
 COPY resources/icons $RESOURCES_PATH/icons
 
@@ -807,9 +785,6 @@ RUN \
     # netdata:
     echo "[Desktop Entry]\nVersion=1.0\nType=Link\nName=Netdata\nComment=Hardware Monitoring\nCategories=System;Utility;Development;\nIcon=/resources/icons/netdata-icon.png\nURL=http://localhost:8092/tools/netdata" > /usr/share/applications/netdata.desktop && \
     chmod +x /usr/share/applications/netdata.desktop && \
-    # glances:
-    echo "[Desktop Entry]\nVersion=1.0\nType=Link\nName=Glances\nComment=Hardware Monitoring\nCategories=System;Utility;\nIcon=/resources/icons/glances-icon.png\nURL=http://localhost:8092/tools/glances" > /usr/share/applications/glances.desktop && \
-    chmod +x /usr/share/applications/glances.desktop && \
     # Remove mail and logout desktop icons
     # rm /usr/share/applications/xfce4-mail-reader.desktop && \
     rm /usr/share/applications/xfce4-session-logout.desktop

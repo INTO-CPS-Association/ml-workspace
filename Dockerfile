@@ -447,6 +447,8 @@ ENV LD_LIBRARY_PATH=/lib/x86_64-linux-gnu:/usr/lib/x86_64-linux-gnu:$CONDA_ROOT/
 RUN \
     apt-get update && \
     cd ${RESOURCES_PATH} && \
+    # required for tigervnc
+    apt-get install -y libxfont2  && \
     # Tiger VNC
     wget -O tigervncserver_1.13.1-1ubuntu1_amd64.deb https://sourceforge.net/projects/tigervnc/files/stable/1.13.1/ubuntu-22.04LTS/amd64/tigervncserver_1.13.1-1ubuntu1_amd64.deb/download && \
     dpkg -i tigervncserver_1.13.1-1ubuntu1_amd64.deb && \

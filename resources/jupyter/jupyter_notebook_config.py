@@ -89,7 +89,6 @@ try:
         base_url + "tools/ungit",
         base_url + "tools/netdata",
         base_url + "tools/vnc",
-        base_url + "tools/glances",
         base_url + "tools/vscode",
     ]
 except Exception:

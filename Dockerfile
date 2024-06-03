@@ -445,18 +445,19 @@ ENV LD_LIBRARY_PATH=/lib/x86_64-linux-gnu:/usr/lib/x86_64-linux-gnu:$CONDA_ROOT/
 
 # Install VNC
 RUN \
-    apt-get update  && \
-    # required for websockify
-    # apt-get install -y python-numpy  && \
+    apt-get update && \
     cd ${RESOURCES_PATH} && \
     # Tiger VNC
-    wget -qO- https://sourceforge.net/projects/tigervnc/files/stable/1.11.0/tigervnc-1.11.0.x86_64.tar.gz/download | tar xz --strip 1 -C / && \
+    wget -O tigervncserver_1.13.1-1ubuntu1_amd64.deb https://sourceforge.net/projects/tigervnc/files/stable/1.13.1/ubuntu-22.04LTS/amd64/tigervncserver_1.13.1-1ubuntu1_amd64.deb/download && \
+    dpkg -i tigervncserver_1.13.1-1ubuntu1_amd64.deb && \
+    rm tigervncserver_1.13.1-1ubuntu1_amd64.deb && \
+    # required for websockify
+    apt-get install -y python3-numpy  && \
     # Install websockify
     mkdir -p ./novnc/utils/websockify && \
     # Before updating the noVNC version, we need to make sure that our monkey patching scripts still work!!
-    wget -qO- https://github.com/novnc/noVNC/archive/v1.2.0.tar.gz | tar xz --strip 1 -C ./novnc && \
-    wget -qO- https://github.com/novnc/websockify/archive/v0.9.0.tar.gz | tar xz --strip 1 -C ./novnc/utils/websockify && \
-    chmod +x -v ./novnc/utils/*.sh && \
+    wget -qO- https://github.com/novnc/noVNC/archive/v1.4.0.tar.gz | tar xz --strip 1 -C ./novnc && \
+    wget -qO- https://github.com/novnc/websockify/archive/v0.11.0.tar.gz | tar xz --strip 1 -C ./novnc/utils/websockify && \
     # create user vnc directory
     mkdir -p $HOME/.vnc && \
     # Fix permissions
@@ -487,14 +488,20 @@ RUN \
     # Cleanup
     clean-layer.sh
 
-## Glances webtool is installed in python section below via requirements.txt
-
 ## Filebrowser
 COPY resources/tools/filebrowser.sh $RESOURCES_PATH/tools/filebrowser.sh
 RUN \
     /bin/bash $RESOURCES_PATH/tools/filebrowser.sh --install && \
     # Cleanup
     clean-layer.sh
+
+## XRDP
+## TODO: make the XRDP work by default in ml-workspace
+#COPY resources/tools/xrdp.sh $RESOURCES_PATH/tools/xrdp.h
+#RUN \
+    #/bin/bash $RESOURCES_PATH/tools/xrdp.h --install && \
+    # Cleanup
+    #clean-layer.sh
 
 #ARG ARG_WORKSPACE_FLAVOR="full"
 ARG ARG_WORKSPACE_FLAVOR="minimal"
@@ -722,7 +729,7 @@ COPY resources/supervisor/programs/ /etc/supervisor/conf.d/
 COPY resources/config/90assumeyes /etc/apt/apt.conf.d/
 
 # Monkey Patching novnc: Styling and added clipboard support. All changed sections are marked with CUSTOM CODE
-COPY resources/novnc/ $RESOURCES_PATH/novnc/
+#COPY resources/novnc/ $RESOURCES_PATH/novnc/
 
 RUN \
     ## create index.html to forward automatically to `vnc.html`

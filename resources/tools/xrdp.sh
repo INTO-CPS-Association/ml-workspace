@@ -19,7 +19,7 @@ if [ ! -f "/usr/sbin/xrdp"  ]; then
     apt-get update
     yes N | apt-get install -y --no-install-recommends xrdp
     # use xfce
-    sudo sed -i.bak '/fi/a #xrdp multiple users configuration \n xfce-session \n' /etc/xrdp/startwm.sh
+    sed -i.bak '/fi/a #xrdp multiple users configuration \n xfce-session \n' /etc/xrdp/startwm.sh
     # generate /etc/xrdp/rsakeys.ini
     cd /etc/xrdp/ && xrdp-keygen xrdp
 else
@@ -29,6 +29,7 @@ fi
 # Run
 if [ $INSTALL_ONLY = 0 ] ; then
     echo "Starting XRDP server"
-    /usr/sbin/xrdp -nodaemon
+    /usr/sbin/xrdp
+    #/usr/sbin/xrdp -nodaemon
     sleep 10
 fi

@@ -1,23 +1,47 @@
 name: workspace-nouveau
 
 services:
+  traefik:
+    image: traefik:v3.5.4
+    restart: unless-stopped
+    command: 
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--entryPoints.web.address=:80"
+      - "--entrypoints.web.forwardedHeaders.insecure=true"
+      - "--entrypoints.web.proxyProtocol.insecure=true"
+      - "--log.level=DEBUG"
+    ports:
+      - "80:80"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+  
   workspace:
     image: workspace-nouveau:latest
     build:
       context: .
       args:
-        CODE_SERVER_PORT: 8080
+        CODE_SERVER_PORT: 8887
         JUPYTER_NOTEBOOK_PORT: 8888
         JUPYTER_LAB_PORT: 8899
         MAIN_USER: dtaas-user
-    ports:
-      - "6901:6901"
-      - "8080:8080"
-      - "8888:8888"
-      - "8899:8899"
     shm_size: 512m
     volumes:
       - ./persistent_dir:/workspace
+    labels:
+      - "traefik.enable=true"
+      # Router for VNC (port 6091)
+      - "traefik.http.routers.u1-vnc.entryPoints=web"
+      - "traefik.http.routers.u1-vnc.rule=PathPrefix(`/${username1}/vnc`)"
+      - "traefik.http.routers.u1-vnc.middlewares=traefik-forward-auth"
+      - "traefik.http.routers.u1-vnc.service=u1-vnc"
+      - "traefik.http.services.u1-vnc.loadbalancer.server.port=6091"
+      # Router for VSCode (port 8090)
+      - "traefik.http.routers.u1-vscode.entryPoints=web"
+      - "traefik.http.routers.u1-vscode.rule=PathPrefix(`/${username1}/vscode`)"
+      - "traefik.http.routers.u1-vscode.middlewares=traefik-forward-auth"
+      - "traefik.http.routers.u1-vscode.service=u1-vscode"
+      - "traefik.http.services.u1-vscode.loadbalancer.server.port=8090"
     develop:
       watch:
         - path: .

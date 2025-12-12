@@ -6,9 +6,7 @@ set -xe
 apt-get update && apt-get install -y \
     python3 \
     python3-pip
-apt-get clean
-rm -rf /var/lib/apt/lists/*
 
-pip install --break-system-packages \
+pip install --break-system-packages --no-cache-dir \
     jupyterlab \
     notebook
